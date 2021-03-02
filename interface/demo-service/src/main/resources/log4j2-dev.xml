@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Kafka name="LogKafka" topic="action-log-v2">
+            <Property name="bootstrap.servers">${env:LOG_KAFKA_URL}</Property>
+            <Property name="client.id">log-forwarder</Property>
+            <Property name="compression.type">snappy</Property>
+            <Property name="delivery.timeout.ms">60000</Property>
+            <Property name="linger.ms">50</Property>
+            <Property name="reconnect.backoff.ms">5000</Property>
+            <Property name="reconnect.backoff.max.ms">50000</Property>
+            <Property name="batch.size">10</Property>
+            <Property name="max.block.ms">5000</Property>
+            <Property name="acks">0</Property> <!-- Improves log forwarding throughput but violates At-least once -->
+            <CoreNgLayout/>
+        </Kafka>
+        <Failover name="CoreNg" primary="Async" >
+            <Failovers>
+                <AppenderRef ref="Console"/>
+            </Failovers>
+        </Failover>
+        <Async name="Async" bufferSize="262144" errorRef="Console">
+            <AppenderRef ref="LogKafka"/>
+            <LinkedTransferQueue/>
+        </Async>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%style{%date{DEFAULT}}{yellow}|%highlight{%level}{FATAL=bg_red,ERROR=red,WARN=yellow,INFO=green}|%logger|%msg%throwable%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Logger name="org.apache.kafka" level="INFO" /> <!-- avoid recursive logging -->
+        <Logger name="CoreNg">
+            <AppenderRef ref="CoreNg"/>
+        </Logger>
+        <Root level="info">
+            <AppenderRef ref="Console" />
+        </Root>
+    </Loggers>
+</Configuration>
